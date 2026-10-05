@@ -1,0 +1,232 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Mgmt+2</title>
+<meta name="theme-color" content="#1b6b52">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="description" content="Mgmt+2: NEB Grade 11 and 12 Accountancy and Economics numericals with charts and raw data.">
+<style>
+:root{--bg:#f5f6f3;--card:#fff;--ink:#16202e;--muted:#5b697a;--line:#dde2e7;--acc:#1b6b52;--acc2:#b4491f;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#10161d;--card:#18212b;--ink:#e8edf2;--muted:#9aa8b8;--line:#2a3643;--acc:#4fc3a1;--acc2:#f08a5d}}
+:root[data-theme="dark"]{--bg:#10161d;--card:#18212b;--ink:#e8edf2;--muted:#9aa8b8;--line:#2a3643;--acc:#4fc3a1;--acc2:#f08a5d}
+*,*::before,*::after{box-sizing:border-box}
+canvas{display:block}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 "IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif}
+main{max-width:760px;margin:0 auto;padding:20px 16px 40px}
+h1{font:700 30px/1.15 Newsreader,Georgia,serif;margin:0 0 6px}
+.sub{color:var(--muted);margin:0 0 18px;max-width:60ch}
+nav{display:flex;gap:4px;overflow-x:auto;border-bottom:1px solid var(--line);margin:0 -16px;padding:0 16px}
+nav button{flex:none;background:none;border:0;border-bottom:3px solid transparent;color:var(--muted);font:500 15px "IBM Plex Sans",system-ui,sans-serif;padding:10px 12px;cursor:pointer}
+nav button[aria-selected="true"]{color:var(--ink);border-color:var(--acc)}
+.gl{flex:none;align-self:center;padding:0 6px 0 14px;margin-left:6px;border-left:1px solid var(--line);font:600 13px "IBM Plex Sans",system-ui,sans-serif;color:var(--acc)}
+.gl:first-child{border:0;margin:0;padding-left:0}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid var(--acc);outline-offset:1px}
+h2{font:600 13px/1.2 "IBM Plex Sans",system-ui,sans-serif;color:var(--muted);margin:26px 0 8px}
+.note{margin:16px 0 0;color:var(--muted);font-size:14px;max-width:62ch}
+#inp{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:14px}
+label{display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--muted)}
+.wide{grid-column:1/-1}
+input,select,textarea{font:16px "IBM Plex Sans",system-ui,sans-serif;color:var(--ink);background:var(--card);border:1px solid var(--line);border-radius:6px;padding:9px 10px;width:100%}
+textarea{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:14px}
+.figs{display:grid;grid-template-columns:1fr 1fr;border-top:1px solid var(--line)}
+.fig{padding:10px 8px 10px 0;border-bottom:1px solid var(--line)}
+.fig b{display:block;font:700 22px/1.2 Newsreader,Georgia,serif;font-variant-numeric:tabular-nums}
+.fig span{font-size:13px;color:var(--muted)}
+.chart{position:relative;height:280px;background:var(--card);border:1px solid var(--line);border-radius:6px;padding:8px}
+.tw{overflow-x:auto;background:var(--card);border:1px solid var(--line);border-radius:6px}
+table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums;font-size:14px}
+th{text-align:right;font-weight:600;padding:8px 10px;border-bottom:3px double var(--ink);white-space:nowrap}
+td{text-align:right;padding:7px 10px;border-bottom:1px solid var(--line);white-space:nowrap}
+th:first-child,td:first-child{text-align:left}
+tbody tr:last-child td{border-bottom:0}
+</style>
+</head>
+<body>
+<main>
+<h1>Mgmt+2</h1>
+<p class="sub">Accountancy and Economics numericals for NEB Grade 11 and 12 (CDC Nepal). Pick a numerical, change the figures, and watch the raw table and the chart update together.</p>
+<nav id="nav" role="tablist" aria-label="Numericals"></nav>
+<p class="note" id="note"></p>
+<div id="inp"></div>
+<h2>Results</h2>
+<div class="figs" id="cards"></div>
+<h2>Chart</h2>
+<div class="chart"><canvas id="cv" role="img" aria-label="Chart of the numerical"></canvas></div>
+<h2>Raw data</h2>
+<div class="tw" id="tab"></div>
+</main>
+<script>
+const $=id=>document.getElementById(id);
+const f=(x,d=2)=>isFinite(x)?(+x).toLocaleString(undefined,{maximumFractionDigits:d}):'–';
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const lin=(a,b,n)=>Array.from({length:n+1},(_,i)=>a+(b-a)*i/n);
+
+const M={
+bep:{name:'Break-even',note:'Break-even units = Fixed cost ÷ (Selling price − Variable cost per unit).',
+ in:[['fc','Fixed cost',50000],['p','Selling price per unit',50],['vc','Variable cost per unit',30],['mx','Plot up to (units)',5000]],
+ run(v){const cm=v.p-v.vc,be=v.fc/cm,ok=cm>0,u=lin(0,v.mx,10);
+  const rows=u.map(q=>[q,v.p*q,v.fc+v.vc*q,v.p*q-v.fc-v.vc*q]);
+  return{cards:[['Break-even units',ok?f(be,0):'None'],['Break-even sales',ok?f(be*v.p,0):'None'],['Contribution per unit',f(cm)],['Contribution margin ratio',v.p?f(cm/v.p*100,1)+'%':'–']],
+   head:['Units','Revenue','Total cost','Profit / loss'],rows,
+   chart:{type:'line',labels:u.map(x=>f(x,0)),sets:[['Revenue',rows.map(r=>r[1])],['Total cost',rows.map(r=>r[2])],['Fixed cost',u.map(()=>v.fc)]],xt:'Units',yt:'Amount'}}}},
+dep:{name:'Depreciation',note:'Straight-line (SLM): (Cost − Scrap) ÷ Life. Written-down value (WDV): a fixed % of the opening book value each year.',
+ in:[['c','Asset cost',100000],['s','Scrap value',10000],['n','Useful life (years)',5],['r','WDV rate (%)',25]],
+ run(v){const n=Math.max(1,Math.round(v.n)),sl=(v.c-v.s)/n;let b1=v.c,b2=v.c;const rows=[[0,0,v.c,0,v.c]];
+  for(let y=1;y<=n;y++){const d2=b2*v.r/100;b1-=sl;b2-=d2;rows.push([y,sl,b1,d2,b2])}
+  return{cards:[['SLM depreciation per year',f(sl)],['WDV depreciation, year 1',f(rows[1][3])],['WDV book value at end',f(rows[n][4])],['WDV total depreciation',f(v.c-rows[n][4])]],
+   head:['Year','SLM depreciation','SLM book value','WDV depreciation','WDV book value'],rows,
+   chart:{type:'line',labels:rows.map(r=>'Year '+r[0]),sets:[['SLM book value',rows.map(r=>r[2])],['WDV book value',rows.map(r=>r[4])]],xt:'Year',yt:'Book value'}}}},
+ds:{name:'Demand and supply',note:'Demand: Qd = a − b·P. Supply: Qs = c + d·P. The market clears where Qd = Qs.',
+ in:[['a','Demand intercept (a)',100],['b','Demand slope (b)',2],['c','Supply intercept (c)',-20],['d','Supply slope (d)',3]],
+ run(v){const P=(v.a-v.c)/(v.b+v.d),Q=v.a-v.b*P,pm=v.a/v.b,ok=P>0&&Q>0;
+  const cs=.5*(pm-P)*Q,area=v.c>=0?.5*(Q-v.c)**2/v.d:(Q*Q/2-v.c*Q)/v.d,ps=P*Q-area;
+  const rows=lin(0,pm,10).map(p=>{const qd=Math.max(0,v.a-v.b*p),qs=Math.max(0,v.c+v.d*p);return[p,qd,qs,Math.abs(qd-qs)<1e-6?'Equilibrium':qd>qs?'Shortage':'Surplus']});
+  return{cards:[['Equilibrium price',ok?f(P):'None'],['Equilibrium quantity',ok?f(Q):'None'],['Consumer surplus',ok?f(cs):'–'],['Producer surplus',ok?f(ps):'–']],
+   head:['Price','Quantity demanded','Quantity supplied','Market'],rows,
+   chart:{type:'scatter',sets:[['Demand',rows.map(r=>({x:r[1],y:r[0]}))],['Supply',rows.map(r=>({x:r[2],y:r[0]}))],['Equilibrium',ok?[{x:Q,y:P}]:[],7]],xt:'Quantity',yt:'Price'}}}},
+el:{name:'Elasticity',note:'Midpoint method: %ΔQ ÷ %ΔP, each measured against the average of the old and new values.',
+ in:[['p1','Old price',20],['q1','Old quantity',100],['p2','New price',25],['q2','New quantity',80]],
+ run(v){const dq=v.q2-v.q1,dp=v.p2-v.p1,e=(dq/((v.q1+v.q2)/2))/(dp/((v.p1+v.p2)/2)),pe=(dq/dp)*(v.p1/v.q1),t1=v.p1*v.q1,t2=v.p2*v.q2;
+  const a=Math.abs(e),kind=!isFinite(e)?'–':a>1?'Elastic':a<1?'Inelastic':'Unit elastic';
+  return{cards:[['Midpoint elasticity',f(e)],['Point elasticity (old price)',f(pe)],['Demand is',kind],['Change in revenue',f(t2-t1,0)]],
+   head:['','Price','Quantity','Total revenue'],rows:[['Old',v.p1,v.q1,t1],['New',v.p2,v.q2,t2]],
+   chart:{type:'scatter',sets:[['Demand between the two points',[{x:v.q1,y:v.p1},{x:v.q2,y:v.p2}]]],xt:'Quantity',yt:'Price'}}}},
+raw:{name:'Your data',note:'Paste rows from Excel or a textbook table. The first row is the headings and the first column is the labels.',
+ in:[['t','Data (comma or tab separated)',"Quarter,Revenue,Expenses\nQ1,120,90\nQ2,150,110\nQ3,135,105\nQ4,180,125",'area'],['k','Chart type','bar','sel',['bar','line']]],
+ run(v){let R=v.t.trim().split(/\n/).map(l=>l.split(/[,\t]/).map(s=>s.trim())).filter(r=>r.join(''));
+  if(R.length<2)R=[['Label','Value'],['–','0']];
+  const head=R[0],body=R.slice(1),cols=head.slice(1).map((h,i)=>[h,body.map(r=>parseFloat(r[i+1])||0)]);
+  const rows=body.map(r=>r.map((c,i)=>i&&c!==''&&!isNaN(c)?+c:c));
+  return{cards:cols.slice(0,4).map(([h,a])=>[h+' (total, average)',f(a.reduce((x,y)=>x+y,0))+', '+f(a.reduce((x,y)=>x+y,0)/a.length)]),
+   head,rows,chart:{type:v.k,labels:body.map(r=>r[0]),sets:cols,xt:head[0],yt:'Value'}}}},
+brs:{name:'Bank reconciliation',note:'Grade 11: Correct the cash book for bank items first, then reconcile the adjusted balance to the bank statement.',
+ in:[['cb','Cash book balance (debit)',25000],['ch','Bank charges not in cash book',200],['it','Interest credited, not in cash book',500],['dd','Direct deposit by customer, not in cash book',3000],['iss','Cheques issued, not presented',4000],['dep','Cheques deposited, not collected',6000]],
+ run(v){const adj=v.cb-v.ch+v.it+v.dd,bs=adj+v.iss-v.dep;
+  return{cards:[['Adjusted cash book balance',f(adj)],['Bank statement balance',f(bs)]],head:['Item','Amount'],
+   rows:[['Cash book balance',v.cb],['Less: bank charges',-v.ch],['Add: interest credited',v.it],['Add: direct deposit',v.dd],['Adjusted cash book balance',adj],['Add: cheques issued, not presented',v.iss],['Less: cheques deposited, not collected',-v.dep],['Balance as per bank statement',bs]],
+   chart:{type:'bar',labels:['Cash book','Adjusted cash book','Bank statement'],sets:[['Balance',[v.cb,adj,bs]]],xt:'',yt:'Amount'}}}},
+final:{name:'Trading and P&L',note:'Grade 11: Gross profit = Net sales − Cost of goods sold. Net profit = Gross profit + Other income − Indirect expenses.',
+ in:[['os','Opening stock',20000],['pu','Purchases',150000],['pr','Purchase returns',5000],['de','Direct expenses',10000],['sa','Sales',260000],['sr','Sales returns',10000],['cs','Closing stock',25000],['ie','Indirect expenses',45000],['oi','Other income',3000]],
+ run(v){const ns=v.sa-v.sr,cg=v.os+v.pu-v.pr+v.de-v.cs,gp=ns-cg,np=gp+v.oi-v.ie;
+  return{cards:[['Cost of goods sold',f(cg)],['Gross profit',f(gp)],['Net profit',f(np)],['Gross, net margin',f(gp/ns*100,1)+'%, '+f(np/ns*100,1)+'%']],head:['Item','Amount'],
+   rows:[['Net sales',ns],['Cost of goods sold',cg],['Gross profit',gp],['Other income',v.oi],['Indirect expenses',v.ie],['Net profit',np]],
+   chart:{type:'bar',labels:['Net sales','Cost of goods sold','Gross profit','Net profit'],sets:[['Amount',[ns,cg,gp,np]]],xt:'',yt:'Amount'}}}},
+shares:{name:'Share issue',note:'Grade 12: Issue price = Face value + Premium. Money is collected on application, allotment and call; the premium goes to Securities Premium.',
+ in:[['n','Shares issued',10000],['fv','Face value per share',100],['pm','Premium per share',20],['ap','Application money per share',30],['al','Allotment money per share (with premium)',50]],
+ run(v){const ip=v.fv+v.pm,cl=ip-v.ap-v.al,rows=[['Application',v.ap,v.ap*v.n],['Allotment',v.al,v.al*v.n],['Call',cl,cl*v.n],['Total',ip,ip*v.n]];
+  return{cards:[['Share capital',f(v.fv*v.n,0)],['Securities premium',f(v.pm*v.n,0)],['Total money received',f(ip*v.n,0)],['Call money per share',f(cl)]],head:['Stage','Per share','Total'],rows,
+   chart:{type:'bar',labels:['Application','Allotment','Call'],sets:[['Money received',rows.slice(0,3).map(r=>r[2])]],xt:'',yt:'Amount'}}}},
+cost:{name:'Cost sheet',note:'Grade 12: Prime cost = Material + Labour + Direct expenses. Add factory overheads for factory cost, office overheads for cost of production, selling overheads for cost of sales.',
+ in:[['m','Direct material',60000],['l','Direct labour',40000],['d','Direct expenses',5000],['fo','Factory overheads',15000],['oo','Office overheads',10000],['so','Selling and distribution overheads',8000],['u','Units produced and sold',1000],['pf','Profit (% of cost of sales)',20]],
+ run(v){const pc=v.m+v.l+v.d,fc=pc+v.fo,cp=fc+v.oo,cos=cp+v.so,pr=cos*v.pf/100,sp=cos+pr,rows=[['Prime cost',pc],['Factory cost',fc],['Cost of production',cp],['Cost of sales',cos],['Profit',pr],['Sales',sp]];
+  return{cards:[['Cost per unit',f(cos/v.u)],['Selling price per unit',f(sp/v.u)],['Prime cost',f(pc,0)],['Total sales',f(sp,0)]],head:['Cost element','Amount'],rows,
+   chart:{type:'bar',labels:rows.map(r=>r[0]),sets:[['Amount',rows.map(r=>r[1])]],xt:'',yt:'Amount'}}}},
+eoq:{name:'EOQ and stock levels',note:'Grade 12: EOQ = √(2 × Annual demand × Ordering cost ÷ Carrying cost per unit). Reorder level = Maximum usage × Maximum lead time.',
+ in:[['D','Annual demand (units)',12000],['S','Ordering cost per order',300],['H','Carrying cost per unit per year',6],['mx','Maximum usage per week',300],['mn','Minimum usage per week',100],['nu','Normal usage per week',200],['xl','Maximum lead time (weeks)',6],['ml','Minimum lead time (weeks)',2],['nl','Normal lead time (weeks)',4]],
+ run(v){const q=Math.sqrt(2*v.D*v.S/v.H),ro=v.mx*v.xl,mi=ro-v.nu*v.nl,ma=ro+q-v.mn*v.ml,rows=lin(q/4,q*2,8).map(x=>[x,v.D/x*v.S,x/2*v.H,v.D/x*v.S+x/2*v.H]);
+  return{cards:[['EOQ (units)',f(q,0)],['Reorder level',f(ro,0)],['Minimum level',f(mi,0)],['Maximum level',f(ma,0)]],head:['Order size','Ordering cost','Carrying cost','Total cost'],rows,
+   chart:{type:'line',labels:rows.map(r=>f(r[0],0)),sets:[['Ordering cost',rows.map(r=>r[1])],['Carrying cost',rows.map(r=>r[2])],['Total cost',rows.map(r=>r[3])]],xt:'Order size',yt:'Annual cost'}}}},
+wage:{name:'Wage plans',note:'Grade 12: Time wage = Hours × Rate. Halsey adds 50% of the time saved. Rowan adds (Time saved ÷ Standard time) × Time taken × Rate.',
+ in:[['r','Rate per hour',50],['st','Standard time (hours)',40],['t','Actual time taken (hours)',32],['p','Pieces made',160],['pr','Rate per piece',10]],
+ run(v){const tw=v.t*v.r,sv=Math.max(0,v.st-v.t),h=tw+.5*sv*v.r,rw=tw+sv/v.st*v.t*v.r,pw=v.p*v.pr,rows=[['Time wage',tw],['Piece-rate wage',pw],['Halsey plan',h],['Rowan plan',rw]];
+  return{cards:[['Time saved (hours)',f(sv)],['Halsey bonus',f(h-tw)],['Rowan bonus',f(rw-tw)],['Piece-rate wage',f(pw)]],head:['Method','Wage'],rows,
+   chart:{type:'bar',labels:rows.map(r=>r[0]),sets:[['Wage',rows.map(r=>r[1])]],xt:'',yt:'Wage'}}}},
+nat:{name:'National income',note:'Grade 11: GDP = C + I + G + (X − M). GNP = GDP + Net factor income from abroad. NNP = GNP − Depreciation. National income = NNP − Indirect taxes + Subsidies.',
+ in:[['c','Consumption (C)',700],['i','Investment (I)',200],['g','Government spending (G)',150],['x','Exports (X)',80],['m','Imports (M)',130],['nf','Net factor income from abroad',40],['dp','Depreciation',60],['it','Indirect taxes',90],['sb','Subsidies',20],['po','Population (millions)',10]],
+ run(v){const gdp=v.c+v.i+v.g+v.x-v.m,gnp=gdp+v.nf,nnp=gnp-v.dp,ni=nnp-v.it+v.sb;
+  return{cards:[['GDP',f(gdp)],['GNP',f(gnp)],['National income',f(ni)],['Per capita income',f(ni/v.po)]],head:['Measure','Amount'],
+   rows:[['GDP at market price',gdp],['GNP',gnp],['NNP',nnp],['National income',ni]],
+   chart:{type:'bar',labels:['GDP','GNP','NNP','National income'],sets:[['Amount',[gdp,gnp,nnp,ni]]],xt:'',yt:'Amount'}}}},
+stats:{name:'Mean, median, SD',note:'Grade 11: Mean = Σx ÷ n. Standard deviation = √(Σ(x − mean)² ÷ n). Type or paste the raw values, separated by commas.',
+ in:[['x','Data values','12,15,15,18,20,22,25,25,25,30','area']],
+ run(v){const a=v.x.split(/[\s,;]+/).map(parseFloat).filter(isFinite),n=a.length||1,mean=a.reduce((s,y)=>s+y,0)/n,s=[...a].sort((p,q)=>p-q),
+  med=n%2?s[(n-1)/2]:(s[n/2-1]+s[n/2])/2,c={};a.forEach(y=>c[y]=(c[y]||0)+1);const mx=Math.max(0,...Object.values(c)),
+  mode=mx>1?Object.keys(c).filter(k=>c[k]==mx).join(', '):'None',sd=Math.sqrt(a.reduce((t,y)=>t+(y-mean)**2,0)/n);
+  return{cards:[['Mean',f(mean)],['Median',f(med)],['Mode',mode],['Standard deviation',f(sd,3)]],head:['No.','Value (x)','x − mean','(x − mean)²'],rows:a.map((y,i)=>[i+1,y,y-mean,(y-mean)**2]),
+   chart:{type:'line',labels:a.map((y,i)=>i+1),sets:[['Value',a],['Mean',a.map(()=>mean)]],xt:'Observation',yt:'Value'}}}},
+index:{name:'Index numbers',note:'Grade 11 and 12: Laspeyres = Σp1q0 ÷ Σp0q0 × 100. Paasche = Σp1q1 ÷ Σp0q1 × 100. Fisher = √(Laspeyres × Paasche). Columns: item, p0, q0, p1, q1.',
+ in:[['t','Prices and quantities (base year 0, current year 1)',"Item,p0,q0,p1,q1\nRice,40,10,50,12\nOil,120,4,150,5\nSugar,60,6,80,6",'area']],
+ run(v){const R=v.t.trim().split(/\n/).slice(1).map(l=>l.split(/[,\t]/).map(s=>s.trim())).filter(r=>r.length>4),n=x=>parseFloat(x)||0,sm=(a,b)=>R.reduce((t,r)=>t+n(r[a])*n(r[b]),0),
+  la=sm(3,2)/sm(1,2)*100,pa=sm(3,4)/sm(1,4)*100,fi=Math.sqrt(la*pa),sa=R.reduce((t,r)=>t+n(r[3]),0)/R.reduce((t,r)=>t+n(r[1]),0)*100;
+  return{cards:[['Laspeyres index',f(la)],['Paasche index',f(pa)],['Fisher index',f(fi)],['Simple aggregative index',f(sa)]],head:['Item','p0','q0','p1','q1','Price relative'],
+   rows:R.map(r=>[r[0],n(r[1]),n(r[2]),n(r[3]),n(r[4]),n(r[3])/n(r[1])*100]),
+   chart:{type:'bar',labels:['Laspeyres','Paasche','Fisher','Simple aggregative'],sets:[['Index (base = 100)',[la,pa,fi,sa]]],xt:'',yt:'Index'}}}},
+cc:{name:'Cost curves',note:'Grade 11: TC = TFC + TVC. AC = TC ÷ Q. MC = extra cost of one more unit. Here TVC = a·Q + b·Q².',
+ in:[['fc','Total fixed cost',100],['a','Variable cost term a',20],['b','Variable cost term b',2],['mq','Output up to (units)',10]],
+ run(v){const q=Math.max(1,Math.round(v.mq)),vc=x=>v.a*x+v.b*x*x,rows=[];
+  for(let x=1;x<=q;x++){const tv=vc(x),tc=v.fc+tv;rows.push([x,v.fc,tv,tc,tc/x,tv/x,v.fc/x,tc-(v.fc+vc(x-1))])}
+  const mi=rows.reduce((m,r)=>r[4]<m[4]?r:m,rows[0]);
+  return{cards:[['Lowest average cost',f(mi[4])],['At output (units)',f(mi[0],0)],['Marginal cost, last unit',f(rows[q-1][7])],['Total cost, last unit',f(rows[q-1][3])]],
+   head:['Q','TFC','TVC','TC','AC','AVC','AFC','MC'],rows,
+   chart:{type:'line',labels:rows.map(r=>r[0]),sets:[['AC',rows.map(r=>r[4])],['AVC',rows.map(r=>r[5])],['MC',rows.map(r=>r[7])]],xt:'Output',yt:'Cost per unit'}}}},
+infl:{name:'Inflation and money',note:'Grade 11: Inflation rate = (CPI now − CPI before) ÷ CPI before × 100. Money multiplier = 1 ÷ reserve ratio.',
+ in:[['c0','CPI, earlier year',120],['c1','CPI, current year',129],['dp','Initial deposit',10000],['rr','Reserve ratio (%)',10]],
+ run(v){const k=100/v.rr,rows=[];let d=v.dp;for(let i=1;i<=8;i++){rows.push([i,d,d*v.rr/100,d*(1-v.rr/100)]);d*=1-v.rr/100}
+  return{cards:[['Inflation rate',f((v.c1-v.c0)/v.c0*100)+'%'],['Money multiplier',f(k)],['Maximum deposits created',f(v.dp*k,0)],['Maximum new loans',f(v.dp*(k-1),0)]],head:['Round','New deposit','Reserve kept','Loan made'],rows,
+   chart:{type:'bar',labels:rows.map(r=>'Round '+r[0]),sets:[['New deposit',rows.map(r=>r[1])]],xt:'',yt:'Deposit'}}}}
+};
+const ser=(name,note,lab,ex,w)=>({name,note,in:[['t','Total '+w+' for 1, 2, 3 … units (comma separated)',ex,'area']],
+ run(v){const t=v.t.split(/[\s,;]+/).map(parseFloat).filter(isFinite),rows=t.map((y,i)=>[i+1,y,y/(i+1),y-(t[i-1]||0)]),mx=rows.reduce((m,r)=>r[3]>m[3]?r:m,rows[0]||[0,0,0,0]),la=rows[rows.length-1]||[0,NaN,NaN,NaN];
+  return{cards:[['Highest marginal '+w,f(mx[3])],['At unit',f(mx[0],0)],['Last total',f(la[1])],['Last average',f(la[2])]],head:[lab,'Total','Average','Marginal'],rows,
+   chart:{type:'line',labels:rows.map(r=>r[0]),sets:[['Average',rows.map(r=>r[2])],['Marginal',rows.map(r=>r[3])]],xt:lab,yt:w}}}});
+M.prod=ser('Production (TP, AP, MP)','Grade 11: AP = TP ÷ units of input. MP = change in TP from one more unit of input.','Labour','10,24,39,52,60,64,64,60','product');
+M.util=ser('Utility (TU, MU)','Grade 11: MU = change in TU from one more unit consumed. TU is highest where MU is zero.','Units','10,18,24,28,30,30,28','utility');
+['bep','dep','brs','final','shares','cost','eoq','wage'].forEach(k=>M[k].g='Accounting');
+['ds','el','nat','stats','index','cc','prod','util','infl'].forEach(k=>M[k].g='Economics');
+M.raw.g='Your data';
+
+let cur='bep',ch;const S={};
+let lc;
+function draw(c){
+ lc=c;const cv=$('cv'),b=cv.parentNode,d=devicePixelRatio||1,W=Math.max(200,b.clientWidth-18),H=b.clientHeight-18;
+ cv.width=W*d;cv.height=H*d;cv.style.width=W+'px';cv.style.height=H+'px';
+ const x=cv.getContext('2d');x.setTransform(d,0,0,d,0,0);
+ const cs=getComputedStyle(document.documentElement),g=n=>cs.getPropertyValue(n).trim(),mu=g('--muted'),ln=g('--line'),ink=g('--ink'),col=[g('--acc'),g('--acc2'),'#3b6fd4','#c79a1b'];
+ const sc=c.type==='scatter',br=c.type==='bar',S=c.sets,P=S.map(s=>s[1].map((v,i)=>sc?v:{x:i,y:v}).filter(p=>isFinite(p.x)&&isFinite(p.y))),A=P.flat();
+ if(!A.length)return;
+ const nice=(a,z)=>{const r=(z-a)||1,p=10**Math.floor(Math.log10(r/5)),m=[1,2,5,10].find(k=>r/(k*p)<=6)*p,lo=Math.floor(a/m+1e-9)*m,hi=Math.ceil(z/m-1e-9)*m,t=[];for(let v=lo;v<=hi+m/2;v+=m)t.push(v);return[lo,hi,t]};
+ const[ylo,yhi,yt]=nice(Math.min(0,...A.map(p=>p.y)),Math.max(0,...A.map(p=>p.y)));
+ const n=(c.labels||[]).length||1,[xlo,xhi,xt]=sc?nice(Math.min(0,...A.map(p=>p.x)),Math.max(...A.map(p=>p.x))):[-.5,n-.5,[]];
+ const L=50,R=12,T=42,B=c.xt?46:30,w=W-L-R,h=H-T-B,X=v=>L+(v-xlo)/(xhi-xlo||1)*w,Y=v=>T+h-(v-ylo)/(yhi-ylo||1)*h;
+ x.font='11px system-ui,-apple-system,"Segoe UI",sans-serif';x.lineWidth=1;
+ x.fillStyle=mu;x.textAlign='left';x.textBaseline='middle';x.fillText(c.yt||'',8,12);
+ let lx=8;S.forEach((s,i)=>{x.fillStyle=col[i%4];x.fillRect(lx,21,10,10);x.fillStyle=ink;x.fillText(s[0],lx+14,26);lx+=28+x.measureText(s[0]).width});
+ x.textAlign='right';
+ yt.forEach(v=>{x.strokeStyle=v===0?mu:ln;x.beginPath();x.moveTo(L,Y(v));x.lineTo(W-R,Y(v));x.stroke();x.fillStyle=mu;x.fillText(f(v,2),L-6,Y(v))});
+ x.textAlign='center';x.textBaseline='top';
+ if(sc)xt.forEach(v=>{x.strokeStyle=ln;x.beginPath();x.moveTo(X(v),T);x.lineTo(X(v),T+h);x.stroke();x.fillStyle=mu;x.fillText(f(v,2),X(v),T+h+5)});
+ else{const k=Math.ceil(n/Math.max(1,Math.floor(w/46))),sw=w/n;c.labels.forEach((l,i)=>{if(i%k===0){x.fillStyle=mu;x.fillText(String(l),X(i),T+h+5,sw*k-2)}})}
+ if(c.xt){x.fillStyle=mu;x.fillText(c.xt,L+w/2,H-14)}
+ S.forEach((s,i)=>{x.strokeStyle=x.fillStyle=col[i%4];x.lineWidth=2;const p=P[i];
+  if(br){const sw=w/n*.7/S.length,o=-w/n*.35+sw*i;p.forEach(q=>x.fillRect(X(q.x)+o,Math.min(Y(q.y),Y(0)),sw-1,Math.abs(Y(q.y)-Y(0))||1))}
+  else{if(p.length>1){x.beginPath();p.forEach((q,j)=>j?x.lineTo(X(q.x),Y(q.y)):x.moveTo(X(q.x),Y(q.y)));x.stroke()}p.forEach(q=>{x.beginPath();x.arc(X(q.x),Y(q.y),s[2]||(sc?3.5:2.5),0,7);x.fill()})}});
+}
+addEventListener('resize',()=>lc&&draw(lc));
+function go(){
+ const o=M[cur].run(S[cur]);
+ $('cards').innerHTML=o.cards.map(([l,v])=>`<div class="fig"><b>${esc(v)}</b><span>${esc(l)}</span></div>`).join('');
+ $('tab').innerHTML='<table><thead><tr>'+o.head.map(h=>`<th>${esc(h)}</th>`).join('')+'</tr></thead><tbody>'+o.rows.map(r=>'<tr>'+r.map(c=>`<td>${typeof c==='number'?f(c):esc(c)}</td>`).join('')+'</tr>').join('')+'</tbody></table>';
+ draw(o.chart);
+}
+function show(k){
+ cur=k;const m=M[k];S[k]=S[k]||Object.fromEntries(m.in.map(i=>[i[0],i[2]]));
+ document.querySelectorAll('#nav button').forEach(b=>b.setAttribute('aria-selected',b.dataset.k===k));
+ $('note').textContent=m.note;
+ $('inp').innerHTML=m.in.map(([id,l,d,t,o])=>`<label class="${t?'wide':''}">${l}${t==='area'?`<textarea id="i_${id}" rows="6" spellcheck="false"></textarea>`:t==='sel'?`<select id="i_${id}">${o.map(x=>`<option>${x}</option>`).join('')}</select>`:`<input id="i_${id}" type="number" step="any" inputmode="decimal">`}</label>`).join('');
+ m.in.forEach(([id,,d,t])=>{const e=$('i_'+id);e.value=S[k][id];e.addEventListener('input',()=>{S[k][id]=t?e.value:(parseFloat(e.value)||0);go()})});
+ go();
+}
+$('nav').innerHTML=['Accounting','Economics','Your data'].map(g=>`<span class="gl">${g}</span>`+Object.entries(M).filter(([k,m])=>m.g===g).map(([k,m])=>`<button role="tab" data-k="${k}">${m.name}</button>`).join('')).join('');
+$('nav').addEventListener('click',e=>{const b=e.target.closest('button');if(b)show(b.dataset.k)});
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change',go);
+show('bep');
+if('serviceWorker' in navigator&&location.protocol.startsWith('http'))navigator.serviceWorker.register('sw.js').catch(()=>{});
+</script>
+</body>
+</html>
